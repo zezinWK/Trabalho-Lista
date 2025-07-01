@@ -143,16 +143,16 @@ function App() {
           </div>
         )}
 
-        <section className="mt-8 bg-teal-50 rounded-lg p-5 flex justify-around shadow-inner">
-          <div className="text-center">
+        <section className="mt-8 flex flex-col sm:flex-row justify-around shadow-inner gap-4 bg-transparent sm:bg-teal-50 rounded-lg p-4 sm:p-0">
+          <div className="text-center p-4 rounded-lg whitespace-nowrap bg-teal-50 sm:bg-transparent">
             <p className="text-sm font-semibold text-teal-700">Receitas</p>
             <p className="text-xl font-bold text-green-600">R$ {totalReceitas.toFixed(2)}</p>
           </div>
-          <div className="text-center">
+          <div className="text-center p-4 rounded-lg whitespace-nowrap bg-teal-50 sm:bg-transparent">
             <p className="text-sm font-semibold text-teal-700">Despesas</p>
             <p className="text-xl font-bold text-red-600">R$ {totalDespesas.toFixed(2)}</p>
           </div>
-          <div className="text-center">
+          <div className="text-center p-4 rounded-lg whitespace-nowrap bg-teal-50 sm:bg-transparent">
             <p className="text-sm font-semibold text-teal-700">Saldo</p>
             <p className={`text-xl font-bold ${saldo < 0 ? 'text-red-600' : 'text-green-700'}`}>R$ {saldo.toFixed(2)}</p>
           </div>
