@@ -14,10 +14,11 @@ function App() {
   const [saldo, setSaldo] = useState(0);
   const [editando, setEditando] = useState(null);
   const [modalAberto, setModalAberto] = useState(false);
-
   const [filtroMes, setFiltroMes] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('all');
   const [filtroTipo, setFiltroTipo] = useState('all');
+  const [confirmaExclusao, setConfirmaExclusao] = useState(false);
+  const [transacaoParaExcluir, setTransacaoParaExcluir] = useState(null);
 
   useEffect(() => {
     const carregarTransacoes = async () => {
@@ -74,20 +75,33 @@ function App() {
     setModalAberto(true);
   };
 
-  const excluirTransacao = async id => {
-    await deleteDoc(doc(db, 'transacoes', id));
-    setTransacoes(prev => prev.filter(t => t.id !== id));
+  const excluirTransacao = id => {
+    const transacao = transacoes.find(t => t.id === id);
+    setTransacaoParaExcluir(transacao);
+    setConfirmaExclusao(true);
+  };
+
+  const confirmarExclusao = async () => {
+    if (transacaoParaExcluir) {
+      await deleteDoc(doc(db, 'transacoes', transacaoParaExcluir.id));
+      setTransacoes(prev => prev.filter(t => t.id !== transacaoParaExcluir.id));
+      setConfirmaExclusao(false);
+      setTransacaoParaExcluir(null);
+    }
   };
 
   const aplicadas = transacoes
     .filter(t => !filtroMes || new Date(t.DataHora).getMonth() + 1 === +filtroMes)
     .filter(t => filtroCategoria === 'all' ? true : t.Categoria === filtroCategoria)
-    .filter(t => filtroTipo === 'all' ? true : t.Tipo === filtroTipo);
+    .filter(t => filtroTipo === 'all' ? true : t.Tipo === filtroTipo)
+    .sort((a, b) => new Date(b.DataHora) - new Date(a.DataHora));
 
   return (
-    <div className="min-h-screen bg-gray-100 px-4 py-6">
+    <div className="min-h-screen bg-gray-100 px-4 py-6 text-gray-800">
       <div className="max-w-xl mx-auto bg-white p-6 rounded-2xl shadow-lg">
-        <h1 className="text-3xl font-extrabold text-teal-600 mb-4 text-center">💸 Gestão de Finanças</h1>
+        <div className="flex justify-center items-center mb-4">
+          <h1 className="text-3xl font-extrabold text-teal-600 text-center">💸 Gestão de Finanças</h1>
+        </div>
 
         <button
           onClick={() => {
@@ -120,6 +134,7 @@ function App() {
                   <option value="transporte">Transporte</option>
                   <option value="saude">Saúde</option>
                   <option value="educacao">Educação</option>
+                  <option value="trabalho">Trabalho</option>
                   <option value="outro">Outro</option>
                 </select>
                 <input type="datetime-local" value={datahora} onChange={e => setDatahora(e.target.value)} className="w-full p-3 border rounded-lg bg-gray-100 focus:outline-none" required />
@@ -143,16 +158,31 @@ function App() {
           </div>
         )}
 
-        <section className="mt-8 flex flex-col sm:flex-row justify-around shadow-inner gap-4 bg-transparent sm:bg-teal-50 rounded-lg p-4 sm:p-0">
-          <div className="text-center p-4 rounded-lg whitespace-nowrap bg-teal-50 sm:bg-transparent">
+        {confirmaExclusao && (
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-6 sm:p-8 w-full max-w-sm shadow-xl animate-scale-in mx-4 text-center">
+              <p className="text-lg mb-4">
+                Tem certeza que deseja excluir <br />
+                <strong>{transacaoParaExcluir?.Descrição}</strong>?
+              </p>
+              <div className="flex justify-center gap-3">
+                <button onClick={() => setConfirmaExclusao(false)} className="px-5 py-2 rounded-md bg-gray-300 hover:bg-gray-400">Cancelar</button>
+                <button onClick={confirmarExclusao} className="px-5 py-2 rounded-md bg-red-500 hover:bg-red-600 text-white">Excluir</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <section className="mt-8 flex flex-col sm:flex-row justify-around shadow-inner gap-4 bg-transparent rounded-lg p-4">
+          <div className="text-center p-4 rounded-lg whitespace-nowrap bg-teal-50">
             <p className="text-sm font-semibold text-teal-700">Receitas</p>
             <p className="text-xl font-bold text-green-600">R$ {totalReceitas.toFixed(2)}</p>
           </div>
-          <div className="text-center p-4 rounded-lg whitespace-nowrap bg-teal-50 sm:bg-transparent">
+          <div className="text-center p-4 rounded-lg whitespace-nowrap bg-teal-50">
             <p className="text-sm font-semibold text-teal-700">Despesas</p>
-            <p className="text-xl font-bold text-red-600">R$ {totalDespesas.toFixed(2)}</p>
+            <p className="text-xl font-bold text-red-600">- R$ {totalDespesas.toFixed(2)}</p>
           </div>
-          <div className="text-center p-4 rounded-lg whitespace-nowrap bg-teal-50 sm:bg-transparent">
+          <div className="text-center p-4 rounded-lg whitespace-nowrap bg-teal-50">
             <p className="text-sm font-semibold text-teal-700">Saldo</p>
             <p className={`text-xl font-bold ${saldo < 0 ? 'text-red-600' : 'text-green-700'}`}>R$ {saldo.toFixed(2)}</p>
           </div>
@@ -172,6 +202,7 @@ function App() {
               <option value="transporte">Transporte</option>
               <option value="saude">Saúde</option>
               <option value="educacao">Educação</option>
+              <option value="trabalho">Trabalho</option>
               <option value="outro">Outro</option>
             </select>
             <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)} className="flex-grow p-3 rounded-lg border bg-gray-100">
@@ -180,6 +211,16 @@ function App() {
               <option value="despesa">Despesas</option>
             </select>
           </div>
+          <button
+            onClick={() => {
+              setFiltroMes('');
+              setFiltroCategoria('all');
+              setFiltroTipo('all');
+            }}
+            className="mt-4 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg w-full sm:w-auto"
+          >
+            Limpar Filtros
+          </button>
         </section>
 
         <section className="mt-6 overflow-x-auto">
@@ -193,7 +234,9 @@ function App() {
                     <p className="font-semibold text-gray-700 break-words">{t.Descrição}</p>
                     <p className="text-sm text-gray-500">{new Date(t.DataHora).toLocaleString()} — {t.Categoria}</p>
                   </div>
-                  <p className={`font-bold ${t.Tipo === 'receita' ? 'text-green-600' : 'text-red-600'}`}>R$ {t.Valor.toFixed(2)}</p>
+                  <p className={`font-bold ${t.Tipo === 'receita' ? 'text-green-600' : 'text-red-600'}`}>
+                    {t.Tipo === 'despesa' ? '-' : ''} R$ {t.Valor.toFixed(2)}
+                  </p>
                   <div className="flex gap-2">
                     <button onClick={() => editarTransacao(t)} className="px-3 py-1 bg-teal-400 hover:bg-teal-500 text-white rounded-md">Editar</button>
                     <button onClick={() => excluirTransacao(t.id)} className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-md">Excluir</button>
