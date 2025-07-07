@@ -14,7 +14,7 @@ function App() {
   const [saldo, setSaldo] = useState(0);
   const [editando, setEditando] = useState(null);
   const [modalAberto, setModalAberto] = useState(false);
-  const [filtroMesAno, setFiltroMesAno] = useState('');
+  const [filtroMes, setFiltroMes] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('all');
   const [filtroTipo, setFiltroTipo] = useState('all');
   const [confirmaExclusao, setConfirmaExclusao] = useState(false);
@@ -41,25 +41,30 @@ function App() {
     setSaldo(r - d);
   }, [transacoes]);
 
-  const formatarValorInput = valor => {
-    let v = valor.replace(/[^\d]/g, '');
-    if (v.length > 11) v = v.slice(0, 11);
-    const parteInteira = v.slice(0, -2) || '0';
-    const parteDecimal = v.slice(-2).padStart(2, '0');
-    return `${parseInt(parteInteira)}.${parteDecimal}`;
-  };
-
   const salvarTransacao = async e => {
     e.preventDefault();
-    if (!descricao || !valor || !datahora) return;
-    const valorFormatado = parseFloat(formatarValorInput(valor));
-    if (valorFormatado === 0) return;
+    const valorNumerico = parseFloat(valor.replace(',', '.'));
+    if (!descricao || !valor || !datahora || valorNumerico <= 0) return;
+
+    const valorArredondado = Math.round(valorNumerico * 100) / 100;
     try {
       if (editando) {
         const ref = doc(db, 'transacoes', editando.id);
-        await updateDoc(ref, { Tipo: tipo, Descrição: descricao, Valor: valorFormatado, Categoria: categoria, DataHora: datahora });
+        await updateDoc(ref, {
+          Tipo: tipo,
+          Descrição: descricao,
+          Valor: valorArredondado,
+          Categoria: categoria,
+          DataHora: datahora
+        });
       } else {
-        await addDoc(collection(db, 'transacoes'), { Tipo: tipo, Descrição: descricao, Valor: valorFormatado, Categoria: categoria, DataHora: datahora });
+        await addDoc(collection(db, 'transacoes'), {
+          Tipo: tipo,
+          Descrição: descricao,
+          Valor: valorArredondado,
+          Categoria: categoria,
+          DataHora: datahora
+        });
       }
       setModalAberto(false);
       setEditando(null);
@@ -76,7 +81,7 @@ function App() {
     setEditando(t);
     setTipo(t.Tipo);
     setDescricao(t.Descrição);
-    setValor((t.Valor * 100).toFixed(0));
+    setValor(t.Valor.toFixed(2));
     setCategoria(t.Categoria);
     setDatahora(t.DataHora);
     setModalAberto(true);
@@ -96,13 +101,16 @@ function App() {
     }
   };
 
+  const formatarValorInput = valor => {
+    let v = valor.replace(/[^\d]/g, '');
+    if (v.length > 6) v = v.slice(0, 6);
+    const parteInteira = v.slice(0, -2) || '0';
+    const parteDecimal = v.slice(-2);
+    return `${parseInt(parteInteira)}.${parteDecimal}`;
+  };
+
   const aplicadas = transacoes
-    .filter(t => {
-      if (!filtroMesAno) return true;
-      const data = new Date(t.DataHora);
-      const anoMes = `${data.getFullYear()}-${(data.getMonth() + 1).toString().padStart(2, '0')}`;
-      return anoMes === filtroMesAno;
-    })
+    .filter(t => !filtroMes || new Date(t.DataHora).getMonth() + 1 === +filtroMes)
     .filter(t => filtroCategoria === 'all' ? true : t.Categoria === filtroCategoria)
     .filter(t => filtroTipo === 'all' ? true : t.Tipo === filtroTipo)
     .sort((a, b) => new Date(b.DataHora) - new Date(a.DataHora));
@@ -142,7 +150,6 @@ function App() {
                 <input
                   type="text"
                   inputMode="numeric"
-                  pattern="[0-9]*"
                   placeholder="Valor (R$)"
                   value={valor}
                   onChange={e => setValor(formatarValorInput(e.target.value))}
@@ -188,29 +195,23 @@ function App() {
           </div>
           <div className="text-center p-4 rounded-lg whitespace-nowrap bg-teal-50">
             <p className="text-sm font-semibold text-teal-700">Despesas</p>
-            <p className="text-xl font-bold text-red-600">R$ {totalDespesas > 0 ? '-' + totalDespesas.toFixed(2) : '0.00'}</p>
+            <p className="text-xl font-bold text-red-600">{totalDespesas > 0 ? 'R$ -' : 'R$ '}{totalDespesas.toFixed(2)}</p>
           </div>
           <div className="text-center p-4 rounded-lg whitespace-nowrap bg-teal-50">
             <p className="text-sm font-semibold text-teal-700">Saldo</p>
-            <p className={`text-xl font-bold ${saldo < 0 ? 'text-red-600' : 'text-green-700'}`}>
-              R$ {saldo < 0 ? '-' : ''}{Math.abs(saldo).toFixed(2)}
-            </p>
+            <p className={`text-xl font-bold ${saldo < 0 ? 'text-red-600' : 'text-green-700'}`}>{saldo < 0 ? 'R$ -' : 'R$ '}{Math.abs(saldo).toFixed(2)}</p>
           </div>
         </section>
 
         <section className="mt-8">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <input
-              type="month"
-              value={filtroMesAno}
-              onChange={e => setFiltroMesAno(e.target.value)}
-              className="p-3 rounded-lg border bg-gray-100"
-            />
-            <select
-              value={filtroCategoria}
-              onChange={e => setFiltroCategoria(e.target.value)}
-              className="p-3 rounded-lg border bg-gray-100"
-            >
+          <div className="flex flex-col sm:flex-row gap-4">
+            <select value={filtroMes} onChange={e => setFiltroMes(e.target.value)} className="flex-grow p-3 rounded-lg border bg-gray-100">
+              <option value="">Todos os meses</option>
+              {[...Array(12)].map((_, i) => (
+                <option key={i} value={i + 1}>{new Date(0, i).toLocaleString('pt-BR', { month: 'long' })}</option>
+              ))}
+            </select>
+            <select value={filtroCategoria} onChange={e => setFiltroCategoria(e.target.value)} className="flex-grow p-3 rounded-lg border bg-gray-100">
               <option value="all">Todas as categorias</option>
               <option value="alimentacao">Alimentação</option>
               <option value="transporte">Transporte</option>
@@ -219,26 +220,13 @@ function App() {
               <option value="trabalho">Trabalho</option>
               <option value="outro">Outro</option>
             </select>
-            <select
-              value={filtroTipo}
-              onChange={e => setFiltroTipo(e.target.value)}
-              className="p-3 rounded-lg border bg-gray-100"
-            >
+            <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)} className="flex-grow p-3 rounded-lg border bg-gray-100">
               <option value="all">Todos os tipos</option>
               <option value="receita">Receitas</option>
               <option value="despesa">Despesas</option>
             </select>
           </div>
-          <button
-            onClick={() => {
-              setFiltroMesAno('');
-              setFiltroCategoria('all');
-              setFiltroTipo('all');
-            }}
-            className="mt-4 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg w-full sm:w-auto"
-          >
-            Limpar Filtros
-          </button>
+          <button onClick={() => { setFiltroMes(''); setFiltroCategoria('all'); setFiltroTipo('all'); }} className="mt-4 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg w-full sm:w-auto">Limpar Filtros</button>
         </section>
 
         <section className="mt-6 overflow-x-auto">
@@ -253,7 +241,7 @@ function App() {
                     <p className="text-sm text-gray-500">{new Date(t.DataHora).toLocaleString()} — {t.Categoria}</p>
                   </div>
                   <p className={`font-bold ${t.Tipo === 'receita' ? 'text-green-600' : 'text-red-600'}`}>
-                    R$ {t.Tipo === 'despesa' ? '-' : ''}{t.Valor.toFixed(2)}
+                    {t.Tipo === 'despesa' && t.Valor > 0 ? 'R$ -' : 'R$ '}{t.Valor.toFixed(2)}
                   </p>
                   <div className="flex gap-2">
                     <button onClick={() => editarTransacao(t)} className="px-3 py-1 bg-teal-400 hover:bg-teal-500 text-white rounded-md">Editar</button>
