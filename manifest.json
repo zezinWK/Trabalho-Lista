@@ -1,0 +1,12 @@
+{
+    "name":"Gestão de Finanças",
+    "short_name":"",
+    "start_url":"/",
+    "display":"standalone",
+    "background_color":"#000000",
+    "theme_color":"#D373F0",
+    "orientation":"portrait-primary",
+    "icons":[
+
+    ]
+}
