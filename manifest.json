@@ -40,15 +40,15 @@
     ],
     "screenshots": [
         {
-          "src": "/images/screenshots/desktop.svg",
+          "src": "/images/screenshots/desktop.png",
           "sizes": "1280x720",
-          "type": "image/svg",
+          "type": "image/png",
           "form_factor": "wide"
         },
         {
-          "src": "/images/screenshots/mobile.svg",
+          "src": "/images/screenshots/mobile.png",
           "sizes": "540x960",
-          "type": "image/svg"
+          "type": "image/png"
         }
       ]
 }
