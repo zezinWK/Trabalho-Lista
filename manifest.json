@@ -37,5 +37,18 @@
             "type":"image/png",
             "sizes":"32x32"
         }
-    ]
+    ],
+    "screenshots": [
+        {
+          "src": "/images/screenshots/desktop.svg",
+          "sizes": "1280x720",
+          "type": "image/svg",
+          "form_factor": "wide"
+        },
+        {
+          "src": "/images/screenshots/mobile.svg",
+          "sizes": "540x960",
+          "type": "image/svg"
+        }
+      ]
 }
