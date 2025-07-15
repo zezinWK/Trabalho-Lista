@@ -11,13 +11,19 @@ import {
 } from 'firebase/firestore';
 import { db } from './fireBase/config';
 
+import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
+
 import FormularioTransacao from './components/FormularioTransacao';
 import ModalConfirmacao from './components/ModalConfirmacao';
 import ResumoFinanceiro from './components/ResumoFinanceiro';
 import Filtros from './components/Filtros';
 import ListaTransacoes from './components/ListaTransacoes';
+import Login from './components/Login';
 
 function App() {
+  const [usuario, setUsuario] = useState(null);
+  const [carregando, setCarregando] = useState(true);
+
   const [transacoes, setTransacoes] = useState([]);
   const [totalReceitas, setTotalReceitas] = useState(0);
   const [totalDespesas, setTotalDespesas] = useState(0);
@@ -33,6 +39,17 @@ function App() {
   const [filtroCategoria, setFiltroCategoria] = useState('all');
   const [filtroTipo, setFiltroTipo] = useState('all');
 
+  // Verifica se o usuário está autenticado
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, user => {
+      setUsuario(user);
+      setCarregando(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Carrega transações do Firestore
   useEffect(() => {
     const carregarTransacoes = async () => {
       const q = query(collection(db, 'transacoes'), orderBy('DataHora', 'desc'));
@@ -40,9 +57,10 @@ function App() {
       const dados = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setTransacoes(dados);
     };
-    carregarTransacoes();
-  }, [modalAberto, confirmaExclusao]);
+    if (usuario) carregarTransacoes();
+  }, [modalAberto, confirmaExclusao, usuario]);
 
+  // Calcula totais
   useEffect(() => {
     let receitas = 0, despesas = 0;
     transacoes.forEach(t => {
@@ -100,13 +118,36 @@ function App() {
     .filter(t => filtroTipo === 'all' || t.Tipo === filtroTipo)
     .sort((a, b) => new Date(b.DataHora) - new Date(a.DataHora));
 
+  const logout = async () => {
+    const auth = getAuth();
+    await signOut(auth);
+  };
+
+  // Tela de carregamento
+  if (carregando) {
+    return (
+      <div className="h-screen flex items-center justify-center text-teal-700 text-lg font-medium">
+        Carregando...
+      </div>
+    );
+  }
+
+  // Tela de login
+  if (!usuario) {
+    return <Login onLogin={setUsuario} />;
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 px-4 py-6 text-gray-800">
       <div className="max-w-xl mx-auto bg-white p-6 rounded-2xl shadow-lg">
-        <div className="flex justify-center items-center mb-4">
-          <h1 className="text-3xl font-extrabold text-teal-600 text-center">💸 Gestão de Finanças</h1>
+
+        {/* Cabeçalho com botão de logout */}
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-3xl font-extrabold text-teal-600">💸 Gestão de Finanças</h1>
+          <button onClick={logout} className="text-sm text-red-500 hover:underline">Sair</button>
         </div>
 
+        {/* Botão nova transação */}
         <button
           onClick={() => {
             setEditando(null);
@@ -117,6 +158,7 @@ function App() {
           + Nova Transação
         </button>
 
+        {/* Modais */}
         <FormularioTransacao
           aberto={modalAberto}
           onCancelar={() => setModalAberto(false)}
@@ -131,8 +173,10 @@ function App() {
           transacao={transacaoParaExcluir}
         />
 
+        {/* Resumo */}
         <ResumoFinanceiro receitas={totalReceitas} despesas={totalDespesas} saldo={saldo} />
 
+        {/* Filtros */}
         <Filtros
           filtroMes={filtroMes}
           setFiltroMes={setFiltroMes}
@@ -143,6 +187,7 @@ function App() {
           limparFiltros={limparFiltros}
         />
 
+        {/* Lista de transações */}
         <ListaTransacoes
           transacoes={transacoesFiltradas}
           onEditar={editarTransacao}

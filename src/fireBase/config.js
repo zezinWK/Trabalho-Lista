@@ -1,5 +1,7 @@
+// firebase/config.js
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth'; // <-- IMPORTANTE
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAJKjjHE9UdEEfYxezTkSeEB66rBw24v-E',
@@ -12,4 +14,6 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+
 export const db = getFirestore(app);
+export const auth = getAuth(app); // <-- ESSENCIAL para login com Google
