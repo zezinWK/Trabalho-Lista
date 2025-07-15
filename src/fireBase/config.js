@@ -4,13 +4,12 @@ import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; // <-- IMPORTANTE
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyAJKjjHE9UdEEfYxezTkSeEB66rBw24v-E',
-  authDomain: 'trabalho-lista.firebaseapp.com',
-  projectId: 'trabalho-lista',
-  storageBucket: 'trabalho-lista.firebasestorage.app',
-  messagingSenderId: '844504325003',
-  appId: '1:844504325003:web:b76110cb1d1db19d93ad8e',
-  measurementId: 'G-CW8Y343Z5S',
+  apiKey: "AIzaSyBN0GinLxwQcPwM4JX0mVt7gYlew5HfBxs",
+  authDomain: "projeto-despesas-7a680.firebaseapp.com",
+  projectId: "projeto-despesas-7a680",
+  storageBucket: "projeto-despesas-7a680.firebasestorage.app",
+  messagingSenderId: "528823830648",
+  appId: "1:528823830648:web:16b671e79ae8a29aaa458d"
 };
 
 const app = initializeApp(firebaseConfig);

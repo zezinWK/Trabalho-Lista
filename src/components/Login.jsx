@@ -1,5 +1,6 @@
-// components/Login.jsx
 import { getAuth, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../fireBase/config'; // ajuste esse caminho se necessário
 
 export default function Login({ onLogin }) {
   const loginComGoogle = async () => {
@@ -7,7 +8,23 @@ export default function Login({ onLogin }) {
     const provider = new GoogleAuthProvider();
     try {
       const resultado = await signInWithPopup(auth, provider);
-      onLogin(resultado.user);
+      const user = resultado.user;
+
+      // Verifica se o usuário já existe na coleção "users"
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          id: user.uid,
+          name: user.displayName,
+          email: user.email,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      }
+
+      onLogin(user);
     } catch (erro) {
       console.error('Erro ao fazer login:', erro);
     }
