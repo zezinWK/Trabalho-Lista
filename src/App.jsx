@@ -7,10 +7,11 @@ import {
   orderBy,
   doc,
   deleteDoc,
-  updateDoc
+  updateDoc,
+  where,
+  serverTimestamp
 } from 'firebase/firestore';
 import { db } from './fireBase/config';
-
 import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
 
 import FormularioTransacao from './components/FormularioTransacao';
@@ -52,20 +53,28 @@ function App() {
   // Carrega transações do Firestore
   useEffect(() => {
     const carregarTransacoes = async () => {
-      const q = query(collection(db, 'transacoes'), orderBy('DataHora', 'desc'));
+      if (!usuario) return;
+
+      const q = query(
+        collection(db, 'transacoes'),
+        where('userId', '==', usuario.uid),
+        orderBy('date', 'desc')
+      );
+
       const snapshot = await getDocs(q);
       const dados = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setTransacoes(dados);
     };
-    if (usuario) carregarTransacoes();
+
+    carregarTransacoes();
   }, [modalAberto, confirmaExclusao, usuario]);
 
   // Calcula totais
   useEffect(() => {
     let receitas = 0, despesas = 0;
     transacoes.forEach(t => {
-      if (t.Tipo === 'receita') receitas += t.Valor;
-      if (t.Tipo === 'despesa') despesas += t.Valor;
+      if (t.type === 'receita') receitas += t.amount;
+      if (t.type === 'despesa') despesas += t.amount;
     });
     setTotalReceitas(receitas);
     setTotalDespesas(despesas);
@@ -76,10 +85,19 @@ function App() {
     try {
       if (editando) {
         const ref = doc(db, 'transacoes', editando.id);
-        await updateDoc(ref, dados);
+        await updateDoc(ref, {
+          ...dados,
+          updatedAt: serverTimestamp()
+        });
       } else {
-        await addDoc(collection(db, 'transacoes'), dados);
+        await addDoc(collection(db, 'transacoes'), {
+          ...dados,
+          userId: usuario.uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
       }
+
       setModalAberto(false);
       setEditando(null);
     } catch (err) {
@@ -113,17 +131,16 @@ function App() {
   };
 
   const transacoesFiltradas = transacoes
-    .filter(t => !filtroMes || new Date(t.DataHora).getMonth() + 1 === +filtroMes)
-    .filter(t => filtroCategoria === 'all' || t.Categoria === filtroCategoria)
-    .filter(t => filtroTipo === 'all' || t.Tipo === filtroTipo)
-    .sort((a, b) => new Date(b.DataHora) - new Date(a.DataHora));
+    .filter(t => !filtroMes || new Date(t.date).getMonth() + 1 === +filtroMes)
+    .filter(t => filtroCategoria === 'all' || t.category === filtroCategoria)
+    .filter(t => filtroTipo === 'all' || t.type === filtroTipo)
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const logout = async () => {
     const auth = getAuth();
     await signOut(auth);
   };
 
-  // Tela de carregamento
   if (carregando) {
     return (
       <div className="h-screen flex items-center justify-center text-teal-700 text-lg font-medium">
@@ -132,22 +149,18 @@ function App() {
     );
   }
 
-  // Tela de login
   if (!usuario) {
-    return <Login onLogin={setUsuario} />;
+    return <Login />;
   }
 
   return (
     <div className="min-h-screen bg-gray-100 px-4 py-6 text-gray-800">
       <div className="max-w-xl mx-auto bg-white p-6 rounded-2xl shadow-lg">
-
-        {/* Cabeçalho com botão de logout */}
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-3xl font-extrabold text-teal-600">💸 Gestão de Finanças</h1>
           <button onClick={logout} className="text-sm text-red-500 hover:underline">Sair</button>
         </div>
 
-        {/* Botão nova transação */}
         <button
           onClick={() => {
             setEditando(null);
@@ -158,7 +171,6 @@ function App() {
           + Nova Transação
         </button>
 
-        {/* Modais */}
         <FormularioTransacao
           aberto={modalAberto}
           onCancelar={() => setModalAberto(false)}
@@ -173,10 +185,8 @@ function App() {
           transacao={transacaoParaExcluir}
         />
 
-        {/* Resumo */}
         <ResumoFinanceiro receitas={totalReceitas} despesas={totalDespesas} saldo={saldo} />
 
-        {/* Filtros */}
         <Filtros
           filtroMes={filtroMes}
           setFiltroMes={setFiltroMes}
@@ -187,7 +197,6 @@ function App() {
           limparFiltros={limparFiltros}
         />
 
-        {/* Lista de transações */}
         <ListaTransacoes
           transacoes={transacoesFiltradas}
           onEditar={editarTransacao}

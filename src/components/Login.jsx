@@ -1,8 +1,8 @@
 import { getAuth, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../fireBase/config'; // ajuste esse caminho se necessário
+import { db } from '../fireBase/config';
 
-export default function Login({ onLogin }) {
+export default function Login() {
   const loginComGoogle = async () => {
     const auth = getAuth();
     const provider = new GoogleAuthProvider();
@@ -24,7 +24,7 @@ export default function Login({ onLogin }) {
         });
       }
 
-      onLogin(user);
+      // Não é necessário chamar onLogin aqui — o App já detecta o login.
     } catch (erro) {
       console.error('Erro ao fazer login:', erro);
     }
